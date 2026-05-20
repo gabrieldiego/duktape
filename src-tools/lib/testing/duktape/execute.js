@@ -7,7 +7,7 @@ const { sleep } = require('../../util/sleep');
 const { logDebug, logInfo } = require('../../util/logging');
 const { compileCTestcase } = require('./compile');
 
-async function executeEcmascriptTestcase({ dukCommandFilename, preparedFilename }) {
+async function executeEcmascriptTestcase({ dukCommandFilename, preparedFilename, env }) {
     var stdout;
     var startTime;
     var endTime;
@@ -19,7 +19,7 @@ async function executeEcmascriptTestcase({ dukCommandFilename, preparedFilename 
 
     startTime = getNowMillis();
     try {
-        ({ stdout } = await asyncExecStdoutUtf8(cmd, {}));
+        ({ stdout } = await asyncExecStdoutUtf8(cmd, { env }));
         endTime = getNowMillis();
     } catch (e) {
         endTime = getNowMillis();
@@ -39,7 +39,7 @@ async function executeEcmascriptTestcase({ dukCommandFilename, preparedFilename 
 //      compile testcase and link against the precompiled library.  This
 //      is much faster.
 
-async function executeCTestcase({ cExeFilename }) {
+async function executeCTestcase({ cExeFilename, env }) {
     var startTime;
     var endTime;
     var stdout;
@@ -49,7 +49,7 @@ async function executeCTestcase({ cExeFilename }) {
 
     startTime = getNowMillis();
     try {
-        ({ stdout } = await asyncExecStdoutUtf8(cmd, {}));
+        ({ stdout } = await asyncExecStdoutUtf8(cmd, { env }));
         endTime = getNowMillis();
     } catch (e) {
         endTime = getNowMillis();
@@ -82,7 +82,7 @@ function computeStats(values) {
     return { average, minimum, maximum, variance, standardDeviation };
 }
 
-async function executeTestcase({ testcaseType, testcaseName, dukCommandFilename, dukLibraryFilename, prepDirectory, preparedFilename, tempDirectory, runCount = 1, runSleep = false, sleepMultiplier = 2.0, sleepAdder = 1.0, sleepMinimum = 1.0 }) {
+async function executeTestcase({ testcaseType, testcaseName, dukCommandFilename, dukLibraryFilename, prepDirectory, preparedFilename, tempDirectory, runCount = 1, runSleep = false, sleepMultiplier = 2.0, sleepAdder = 1.0, sleepMinimum = 1.0, env }) {
     var results = [];
     var durations = [];
     var sleepTimes = [];
@@ -106,10 +106,11 @@ async function executeTestcase({ testcaseType, testcaseName, dukCommandFilename,
         if (testcaseType === 'ecmascript') {
             execResult = await executeEcmascriptTestcase({
                 dukCommandFilename,
-                preparedFilename
+                preparedFilename,
+                env
             });
         } else if (testcaseType === 'c') {
-            execResult = await executeCTestcase({ cExeFilename });
+            execResult = await executeCTestcase({ cExeFilename, env });
         } else {
             throw new TypeError('internal error');
         }

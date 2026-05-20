@@ -22,6 +22,7 @@ async function runTestcase({ engineExePath, repoDirectory, testcaseFilename, kno
     var prepDirectory;
     var testResult;
     var cmd;
+    var execEnv;
 
     // Create a temporary directory for running the test.
     var tempDirectory = createTempDir({});
@@ -71,6 +72,11 @@ async function runTestcase({ engineExePath, repoDirectory, testcaseFilename, kno
         return testResult;
     }
 
+    if (testcaseMetadata.timezone) {
+        execEnv = Object.assign({}, process.env);
+        execEnv.TZ = testcaseMetadata.timezone;
+    }
+
     // Compile Duktape or libduktape if necessary.  Sources may need to be prepared
     // or compiled multiple times if test cases have forced Duktape options.  Compiled
     // binaries and libraries are cached.
@@ -84,7 +90,7 @@ async function runTestcase({ engineExePath, repoDirectory, testcaseFilename, kno
     }
 
     // Execute testcase.
-    var { execResult, durations, sleepTimes } = await executeTestcase({ testcaseType, testcaseName, dukCommandFilename, dukLibraryFilename, prepDirectory, preparedFilename, tempDirectory, runCount, runSleep, sleepMultiplier, sleepAdder, sleepMinimum });
+    var { execResult, durations, sleepTimes } = await executeTestcase({ testcaseType, testcaseName, dukCommandFilename, dukLibraryFilename, prepDirectory, preparedFilename, tempDirectory, runCount, runSleep, sleepMultiplier, sleepAdder, sleepMinimum, env: execEnv });
 
     // Test result analysis.
     var { analysisResult } = analyzeTestcaseResult({ execResult, testcaseMetadata, testcaseExpect, ignoreExpect, knownIssues });

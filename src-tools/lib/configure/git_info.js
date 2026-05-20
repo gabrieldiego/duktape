@@ -3,16 +3,24 @@
 const { execStdoutUtf8 } = require('../util/exec');
 
 function getGitInfo() {
-    var gitCommit, gitDescribe, gitBranch;
+    var gitCommit = 'unknown';
+    var gitDescribe = 'unknown';
+    var gitBranch = 'unknown';
 
-    if (typeof gitCommit === 'undefined') {
+    try {
         gitCommit = execStdoutUtf8(['git', 'rev-parse', 'HEAD']).trim();
+    } catch (e) {
+        console.warn('Git metadata unavailable, using placeholders:', e.message);
     }
-    if (typeof gitDescribe === 'undefined') {
+    try {
         gitDescribe = execStdoutUtf8(['git', 'describe', '--always', '--dirty']).trim();
+    } catch (e) {
+        console.warn('Git metadata unavailable, using placeholders:', e.message);
     }
-    if (typeof gitBranch === 'undefined') {
+    try {
         gitBranch = execStdoutUtf8(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).trim();
+    } catch (e) {
+        console.warn('Git metadata unavailable, using placeholders:', e.message);
     }
     return { gitCommit, gitDescribe, gitBranch };
 }

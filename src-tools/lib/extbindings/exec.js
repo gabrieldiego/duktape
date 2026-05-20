@@ -26,9 +26,8 @@ function execEscape(x) {
 
 // Execute commandline.  Return an object with .stdout, .stderr, and a possible .error.
 function exec(cmdArg, opts) {
-    void opts;
-
     assert(Array.isArray(cmdArg));
+    opts = opts || {};
 
     if (typeof global.sysExecute === 'function') {
         // Duktape
@@ -49,9 +48,13 @@ function exec(cmdArg, opts) {
         const child_process = require('child_process');
         let args = cmdArg.slice(1);
         let cmd = cmdArg[0];
+        let spawnOpts = {};
+        if (opts.env) {
+            spawnOpts.env = opts.env;
+        }
         let res;
         try {
-            res = child_process.spawnSync(cmd, args, {});
+            res = child_process.spawnSync(cmd, args, spawnOpts);
         } catch (e) {
             return {
                 stdout: new Uint8Array(0),
@@ -95,13 +98,18 @@ exports.execStdoutUtf8 = execStdoutUtf8;
 async function asyncExecStdoutUtf8(cmdArg) {
     // Node.js
 
+    let opts = arguments.length > 1 ? arguments[1] : void 0;
     return await new Promise((resolve, reject) => {
         const child_process = require('child_process');
         let args = cmdArg.slice(1);
         let cmd = cmdArg[0];
+        let spawnOpts = {};
+        if (opts && opts.env) {
+            spawnOpts.env = opts.env;
+        }
         let proc;
         try {
-            proc = child_process.spawn(cmd, args, {});
+            proc = child_process.spawn(cmd, args, spawnOpts);
         } catch (e) {
             reject(e);
             return;
