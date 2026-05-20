@@ -611,7 +611,6 @@ DUK_INTERNAL_DECL void duk_hobject_end_critical(duk_hthread *thr,
 
 DUK_INTERNAL_DECL duk_tval *duk_hobject_obtain_arridx_slot(duk_hthread *thr, duk_uint32_t arr_idx, duk_hobject *obj);
 
-DUK_INTERNAL_DECL duk_uint32_t duk_to_array_length_checked(duk_hthread *thr, duk_tval *tv);
 DUK_INTERNAL_DECL duk_bool_t duk_harray_put_array_length_u32_smaller(duk_hthread *thr,
                                                                      duk_hobject *obj,
                                                                      duk_uint32_t old_len,

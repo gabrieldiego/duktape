@@ -133,7 +133,6 @@ DUK_LOCAL duk_bool_t duk__preventextensions_proxy(duk_hthread *thr, duk_hobject 
 	/* 'obj' stability assumed from caller. */
 	if (duk_proxy_trap_check_nokey(thr, (duk_hproxy *) obj, DUK_STRIDX_PREVENT_EXTENSIONS)) {
 		duk_bool_t trap_rc;
-		duk_hobject *target;
 
 		duk_call_method(thr, 1); /* [ ... trap handler target ] -> [ ... result ] */
 		trap_rc = duk_to_boolean_top_pop(thr);

@@ -129,8 +129,8 @@ static duk_ret_t test_uncovered(duk_context *ctx, void *udata) {
 	duk_resize_buffer(ctx, -2, 1);  /* 1024 -> 1 byte(s) */
 
 	ptr = (void *) 0xdeadbeefUL;
-	sz = (void *) 0x12345678UL;
-	ptr = duk_opt_buffer_data(ctx, -1, &sz, 0x87654321UL, 0xabcdef99UL);
+	sz = 0x12345678UL;
+	ptr = duk_opt_buffer_data(ctx, -1, &sz, (void *) 0x87654321UL, 0xabcdef99UL);
 	printf("ptr: NULL=%d, 0xdeadbeef=%d 0x87654321=%d\n", ptr == NULL, ptr == (void *) 0xdeadbeefUL, ptr == (void *) 0x87654321UL);
 	printf("sz: 0=%d, 0x12345678=%d 0xabcdef99=%d\n", sz == 0, sz == 0x12345678UL, sz == 0xabcdef99);
 

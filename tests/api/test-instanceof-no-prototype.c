@@ -10,7 +10,8 @@
 ==> rc=1, result='TypeError: instanceof rval has no .prototype'
 ===*/
 
-static duk_ret_t test_ecma(duk_context *ctx) {
+static duk_ret_t test_ecma(duk_context *ctx, void *udata) {
+	(void) udata;
 	duk_eval_string(ctx,
 		"(function () {\n"
 		"    function Constructor() {}\n"
@@ -27,7 +28,8 @@ static duk_ret_t my_constructor(duk_context *ctx) {
 	return 0;
 }
 
-static duk_ret_t test_c(duk_context *ctx) {
+static duk_ret_t test_c(duk_context *ctx, void *udata) {
+	(void) udata;
 	duk_bool_t rc;
 
 	duk_push_c_function(ctx, my_constructor, 0);

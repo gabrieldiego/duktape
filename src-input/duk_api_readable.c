@@ -50,7 +50,7 @@ DUK_INTERNAL void duk_push_objproto_tostring_tval(duk_hthread *thr, duk_tval *tv
 	duk_hobject *h;
 	duk_hobject *h_resolved;
 	duk_small_uint_t htype;
-	duk_small_uint_t stridx;
+	duk_small_uint_t stridx = DUK_STRIDX_UC_OBJECT;
 
 	DUK_ASSERT_API_ENTRY(thr);
 	DUK_ASSERT(tv != NULL); /* Unstable pointer. */

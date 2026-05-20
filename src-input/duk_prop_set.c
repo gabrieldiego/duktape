@@ -76,7 +76,6 @@ DUK_LOCAL_DECL duk_bool_t duk__prop_set_idxkey_unsafe(duk_hthread *thr,
                                                       duk_bool_t throw_flag);
 DUK_LOCAL_DECL duk_bool_t duk__setfinal_strkey_ordinary(duk_hthread *thr, duk_hobject *obj, duk_hstring *key, duk_idx_t idx_val);
 DUK_LOCAL_DECL duk_bool_t duk__setfinal_idxkey_ordinary(duk_hthread *thr, duk_hobject *obj, duk_uarridx_t idx, duk_idx_t idx_val);
-DUK_LOCAL_DECL duk_bool_t duk__setfinal_idxkey(duk_hthread *thr, duk_hobject *obj, duk_uarridx_t idx, duk_idx_t idx_val);
 
 DUK_LOCAL_DECL duk_bool_t duk__setcheck_idxkey_ordinary(duk_hthread *thr,
                                                         duk_hobject *obj,

@@ -393,7 +393,6 @@ DUK_INTERNAL duk_ret_t duk_bi_object_setprototype_shared(duk_hthread *thr) {
 
 	duk_hobject *h_obj;
 	duk_hobject *h_new_proto;
-	duk_hobject *h_curr;
 	duk_ret_t ret_success = 1; /* retval for success path */
 	duk_uint_t mask;
 	duk_int_t magic;
@@ -471,10 +470,8 @@ DUK_INTERNAL duk_ret_t duk_bi_object_constructor_define_property(duk_hthread *th
 	 */
 
 	duk_hobject *obj;
-	duk_idx_t idx_value;
 	duk_uint_t defprop_flags;
 	duk_small_uint_t magic;
-	duk_bool_t throw_flag;
 	duk_bool_t ret;
 
 	DUK_ASSERT(thr != NULL);

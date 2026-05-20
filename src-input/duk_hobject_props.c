@@ -379,7 +379,6 @@ DUK_INTERNAL duk_bool_t duk_hobject_has_finalizer_fast_raw(duk_heap *heap, duk_h
  */
 
 DUK_INTERNAL void duk_hobject_object_seal_freeze_helper(duk_hthread *thr, duk_hobject *obj, duk_bool_t is_freeze) {
-	duk_uint8_t *f_base;
 	duk_uint_t ownpropkeys_flags;
 	duk_uarridx_t i, len;
 

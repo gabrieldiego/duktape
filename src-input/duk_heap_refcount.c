@@ -245,10 +245,8 @@ DUK_LOCAL void duk__refc_fin_slowrefs(duk_heap *heap, duk_hobject *h) {
 
 DUK_INTERNAL DUK_HOT void duk_hobject_refcount_finalize_norz(duk_heap *heap, duk_hobject *h) {
 	duk_hthread *thr;
-	duk_uint_fast32_t i;
 	duk_uint_fast32_t n;
 	duk_propvalue *p_val;
-	duk_tval *p_tv;
 	duk_hstring **p_key;
 	duk_uint8_t *p_attr;
 	duk_hobject *h_proto;
@@ -295,7 +293,7 @@ DUK_INTERNAL DUK_HOT void duk_hobject_refcount_finalize_norz(duk_heap *heap, duk
 
 		n = h->i_next;
 		while (n-- > 0) {
-			duk_propvalue *pv = val_base + n;
+		duk_propvalue *pv = val_base + n;
 			duk_uint8_t attrs;
 			if (key_base[n] == DUK_ARRIDX_NONE) {
 				continue;

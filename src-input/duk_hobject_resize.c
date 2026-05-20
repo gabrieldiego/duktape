@@ -114,63 +114,6 @@ DUK_INTERNAL duk_uint32_t duk_harray_count_used_items(duk_heap *heap, duk_harray
 	return count;
 }
 
-/* Compact array items. */
-DUK_LOCAL void duk__harray_compact_items(duk_hthread *thr, duk_harray *obj) {
-	duk_tval *items;
-	duk_uint32_t i;
-
-	if (!DUK_HOBJECT_HAS_ARRAY_ITEMS((duk_hobject *) obj)) {
-		return;
-	}
-
-	items = DUK_HARRAY_GET_ITEMS(thr->heap, obj);
-	i = DUK_HARRAY_GET_ITEMS_LENGTH(obj);
-
-	while (i > 0U) {
-		duk_tval *tv = items + (i - 1);
-		if (!DUK_TVAL_IS_UNUSED(tv)) {
-			break; /* => 'i' is active length */
-		}
-		i--;
-	}
-	if (i != DUK_HARRAY_GET_ITEMS_LENGTH(obj)) {
-		duk_small_uint_t prev_ms_base_flags;
-		duk_bool_t prev_error_not_allowed;
-		duk_tval *new_items;
-		duk_size_t new_alloc_size;
-
-		DUK_DD(DUK_DDPRINT("compacting items, items_length=%ld, active length=%ld",
-		                   (long) DUK_HARRAY_GET_ITEMS_LENGTH(obj),
-		                   (long) i));
-
-		DUK_ASSERT(i < DUK_HARRAY_GET_ITEMS_LENGTH(obj));
-
-		duk_hobject_start_critical(thr, &prev_ms_base_flags, DUK_MS_FLAG_NO_OBJECT_COMPACTION, &prev_error_not_allowed);
-
-		/* No need for alloc size wrap check because we're always reallocating
-		 * to smaller than previous size.
-		 */
-		new_alloc_size = sizeof(duk_tval) * (duk_size_t) i;
-		DUK_ASSERT(new_alloc_size / sizeof(duk_tval) == (duk_size_t) i);
-		new_items =
-		    (duk_tval *) DUK_REALLOC(thr->heap, (duk_uint8_t *) DUK_HARRAY_GET_ITEMS(thr->heap, obj), new_alloc_size);
-
-		duk_hobject_end_critical(thr, &prev_ms_base_flags, &prev_error_not_allowed);
-
-		if (DUK_UNLIKELY(new_items == NULL && new_alloc_size > 0)) {
-			/* This should actually never happen because we're realloc()'ing to a
-			 * smaller size.
-			 */
-			DUK_D(DUK_DPRINT("realloc to smaller non-zero size failed, realloc bug"));
-			DUK_ERROR_ALLOC_FAILED(thr);
-		}
-		DUK_HARRAY_SET_ITEMS(thr->heap, obj, new_items);
-		DUK_HARRAY_SET_ITEMS_LENGTH(obj, i);
-	} else {
-		DUK_DD(DUK_DDPRINT("items already compacted, active length=%ld", (long) i));
-	}
-}
-
 /*
  *  Reallocate property allocation, moving properties to the new allocation.
  *

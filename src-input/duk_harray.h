@@ -106,6 +106,5 @@ struct duk_harray {
 };
 
 DUK_INTERNAL_DECL duk_uint32_t duk_harray_get_active_items_length(duk_harray *a);
-DUK_INTERNAL_DECL duk_tval *duk_harray_get_items(duk_heap *heap, duk_harray *a);
 
 #endif /* DUK_HARRAY_H_INCLUDED */

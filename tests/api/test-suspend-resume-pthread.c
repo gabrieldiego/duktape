@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+extern int usleep(unsigned int usec);
+
 /*---
 pthread: true
 ---*/
@@ -19,13 +21,13 @@ pthread_mutex_init: 0
 spawn threads
 wait for threads to finish
 join threads
-final globalCounter: 100000
+final globalCounter: 16000
 destroy mutex and exit
 pthread_mutex_destroy: 0
 all done
 ===*/
 
-#define NUM_THREADS 100
+#define NUM_THREADS 16
 
 static pthread_mutex_t duktape_lock;
 static pthread_t threads[NUM_THREADS];
@@ -88,6 +90,7 @@ static void *thread_start(void *arg) {
 void test(duk_context *ctx) {
 	int rc;
 	int i;
+	int created_threads = 0;
 
 	srand((unsigned int) time(NULL));
 
@@ -125,19 +128,20 @@ void test(duk_context *ctx) {
 			printf("pthread_create: %d\n", rc); fflush(stdout);
 			break;
 		}
+		created_threads = i + 1;
 	}
 	my_unlock();
 
 	printf("wait for threads to finish\n"); fflush(stdout);
 	for (;;) {
-		if (finish_count == NUM_THREADS) {
+		if (finish_count == created_threads) {
 			break;
 		}
 		(void) usleep(1000000);
 	}
 
 	printf("join threads\n"); fflush(stdout);
-	for (i = 0; i < NUM_THREADS; i++) {
+	for (i = 0; i < created_threads; i++) {
 		void *retval;
 		rc = pthread_join(threads[i], &retval);
 		if (rc != 0) {

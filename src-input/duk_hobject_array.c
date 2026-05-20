@@ -66,7 +66,6 @@ DUK_INTERNAL duk_bool_t duk_harray_put_array_length_u32_smaller(duk_hthread *thr
 	duk_uint32_t target_len;
 	duk_uint_fast32_t i, n;
 	duk_tval *tv;
-	duk_bool_t rc;
 	duk_harray *h_arr;
 
 	DUK_DDD(DUK_DDDPRINT("new array length smaller than old (%ld -> %ld), "
@@ -230,7 +229,6 @@ DUK_INTERNAL duk_bool_t duk_harray_put_array_length_u32(duk_hthread *thr,
                                                         duk_bool_t force_flag) {
 	duk_harray *a;
 	duk_uint32_t old_len;
-	duk_bool_t rc;
 
 	DUK_ASSERT(thr != NULL);
 	DUK_ASSERT(obj != NULL);
@@ -264,11 +262,8 @@ DUK_INTERNAL duk_bool_t duk_harray_put_array_length_u32(duk_hthread *thr,
 	 *  still valid as properties haven't been resized (and entries compacted).
 	 */
 
-	rc = duk_harray_put_array_length_u32_smaller(thr, obj, old_len, new_len, force_flag);
-
 	/* XXX: shrink array allocation or entries compaction here? */
-
-	return rc;
+	return duk_harray_put_array_length_u32_smaller(thr, obj, old_len, new_len, force_flag);
 }
 
 DUK_INTERNAL duk_bool_t duk_harray_put_array_length_top(duk_hthread *thr, duk_hobject *obj, duk_bool_t force_flag) {

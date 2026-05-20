@@ -80,6 +80,7 @@ DUK_INTERNAL void duk_hstring_set_charlen(duk_hstring *h, duk_size_t len) {
 #endif
 }
 
+#if !defined(DUK_USE_HSTRING_CLEN)
 /*
  *  duk_hstring charlen, when lazy charlen enabled.
  */
@@ -104,6 +105,7 @@ DUK_LOCAL duk_size_t duk__hstring_get_charlen_slowpath(duk_hstring *h) {
 		return res;
 	}
 }
+#endif /* !DUK_USE_HSTRING_CLEN */
 
 #if defined(DUK_USE_HSTRING_CLEN)
 DUK_INTERNAL DUK_HOT duk_size_t duk_hstring_get_charlen(duk_hstring *h) {

@@ -1284,7 +1284,6 @@ void duk__putvar_helper(duk_hthread *thr,
                         duk_bool_t strict) {
 	duk__id_lookup_result ref;
 	duk_tval tv_tmp_val;
-	duk_tval tv_tmp_obj;
 	duk_tval tv_tmp_key;
 	duk_bool_t parents;
 
@@ -1687,7 +1686,6 @@ duk_bool_t duk__declvar_helper(duk_hthread *thr,
 
 	return 0;
 
-fail_internal_error:
 fail_existing_attributes:
 fail_not_extensible:
 	DUK_ERROR_TYPE(thr, "declaration failed");
