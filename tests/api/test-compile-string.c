@@ -4,12 +4,15 @@ program code
 return value is: '123'
 myFile.js
 return value is: '234'
+return value is: '123'
 compile rc=0
 program code
 return value is: '123'
 compile rc=0
 myFile.js
 return value is: '234'
+compile rc=0
+return value is: '123'
 compile rc=1 -> SyntaxError: invalid object literal (line 1, end of input)
 top: 0
 ==> rc=0, result='undefined'
@@ -18,12 +21,15 @@ program code
 return value is: '123'
 myFile.js
 return value is: '234'
+return value is: '123'
 compile rc=0
 program code
 return value is: '123'
 compile rc=0
 myFile.js
 return value is: '234'
+compile rc=0
+return value is: '123'
 compile rc=1 -> SyntaxError: invalid object literal (line 1, end of input)
 top: 0
 ==> rc=0, result='undefined'
@@ -47,6 +53,13 @@ static duk_ret_t test_string(duk_context *ctx, void *udata) {
 	printf("return value is: '%s'\n", duk_to_string(ctx, -1));
 	duk_pop(ctx);
 
+	/* Narrow arrow-function compatibility test */
+	duk_push_string(ctx, "arrow.js");
+	duk_compile_string_filename(ctx, 0, "(() => { return 123; })()");
+	duk_call(ctx, 0);
+	printf("return value is: '%s'\n", duk_to_string(ctx, -1));
+	duk_pop(ctx);
+
 	/* Protected compile, success */
 	rc = duk_pcompile_string(ctx, 0, "print('program code'); 123");
 	printf("compile rc=%ld\n", (long) rc);
@@ -57,6 +70,14 @@ static duk_ret_t test_string(duk_context *ctx, void *udata) {
 	/* Protected compile with explicit filename, success */
 	duk_push_string(ctx, "myFile.js");
 	rc = duk_pcompile_string_filename(ctx, 0, "print(Duktape.act(-2).function.fileName); 234");
+	printf("compile rc=%ld\n", (long) rc);
+	duk_call(ctx, 0);
+	printf("return value is: '%s'\n", duk_to_string(ctx, -1));
+	duk_pop(ctx);
+
+	/* Protected narrow arrow-function compatibility test */
+	duk_push_string(ctx, "arrow.js");
+	rc = duk_pcompile_string_filename(ctx, 0, "(() => { return 123; })()");
 	printf("compile rc=%ld\n", (long) rc);
 	duk_call(ctx, 0);
 	printf("return value is: '%s'\n", duk_to_string(ctx, -1));
@@ -92,6 +113,13 @@ static duk_ret_t test_lstring(duk_context *ctx, void *udata) {
 	printf("return value is: '%s'\n", duk_to_string(ctx, -1));
 	duk_pop(ctx);
 
+	/* Narrow arrow-function compatibility test */
+	duk_push_string(ctx, "arrow.js");
+	duk_compile_lstring_filename(ctx, 0, "(() => { return 123; })()@", strlen("(() => { return 123; })()@") - 1);
+	duk_call(ctx, 0);
+	printf("return value is: '%s'\n", duk_to_string(ctx, -1));
+	duk_pop(ctx);
+
 	/* Protected compile, success */
 	rc = duk_pcompile_lstring(ctx, 0, src1, strlen(src1) - 1);
 	printf("compile rc=%ld\n", (long) rc);
@@ -102,6 +130,14 @@ static duk_ret_t test_lstring(duk_context *ctx, void *udata) {
 	/* Protected compile with explicit filename, success */
 	duk_push_string(ctx, "myFile.js");
 	rc = duk_pcompile_lstring_filename(ctx, 0, src2, strlen(src2) - 1);
+	printf("compile rc=%ld\n", (long) rc);
+	duk_call(ctx, 0);
+	printf("return value is: '%s'\n", duk_to_string(ctx, -1));
+	duk_pop(ctx);
+
+	/* Protected narrow arrow-function compatibility test */
+	duk_push_string(ctx, "arrow.js");
+	rc = duk_pcompile_lstring_filename(ctx, 0, "(() => { return 123; })()@", strlen("(() => { return 123; })()@") - 1);
 	printf("compile rc=%ld\n", (long) rc);
 	duk_call(ctx, 0);
 	printf("return value is: '%s'\n", duk_to_string(ctx, -1));

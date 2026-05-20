@@ -279,6 +279,7 @@ DUK_LOCAL_DECL void duk__parse_func_body(duk_compiler_ctx *comp_ctx,
 DUK_LOCAL_DECL void duk__parse_func_formals(duk_compiler_ctx *comp_ctx);
 DUK_LOCAL_DECL void duk__parse_func_like_raw(duk_compiler_ctx *comp_ctx, duk_small_uint_t flags);
 DUK_LOCAL_DECL duk_int_t duk__parse_func_like_fnum(duk_compiler_ctx *comp_ctx, duk_small_uint_t flags);
+DUK_LOCAL_DECL duk_int_t duk__parse_arrow_func_like_fnum(duk_compiler_ctx *comp_ctx, duk_hstring *h_argname);
 
 #define DUK__FUNC_FLAG_DECL           (1 << 0) /* Parsing a function declaration. */
 #define DUK__FUNC_FLAG_GETSET         (1 << 1) /* Parsing an object literal getter/setter. */
@@ -3229,7 +3230,9 @@ DUK_LOCAL void duk__nud_object_literal(duk_compiler_ctx *comp_ctx, duk_ivalue *r
 
 		is_get = (comp_ctx->prev_token.t == DUK_TOK_IDENTIFIER && comp_ctx->prev_token.str1 == DUK_HTHREAD_STRING_GET(thr));
 		is_set = (comp_ctx->prev_token.t == DUK_TOK_IDENTIFIER && comp_ctx->prev_token.str1 == DUK_HTHREAD_STRING_SET(thr));
-		if ((is_get || is_set) && comp_ctx->curr_token.t != DUK_TOK_COLON) {
+		if ((is_get || is_set) && comp_ctx->curr_token.t != DUK_TOK_COLON &&
+		    comp_ctx->curr_token.t != DUK_TOK_COMMA && comp_ctx->curr_token.t != DUK_TOK_RCURLY &&
+		    comp_ctx->curr_token.t != DUK_TOK_LPAREN) {
 			/* getter/setter */
 			duk_int_t fnum;
 
@@ -3257,7 +3260,6 @@ DUK_LOCAL void duk__nud_object_literal(duk_compiler_ctx *comp_ctx, duk_ivalue *r
 			               st.temp_start); /* temp_start+0 = key, temp_start+1 = closure */
 
 			DUK_ASSERT(st.num_pairs == 0); /* temp state is reset on next loop */
-#if defined(DUK_USE_ES6)
 		} else if (comp_ctx->prev_token.t == DUK_TOK_IDENTIFIER &&
 		           (comp_ctx->curr_token.t == DUK_TOK_COMMA || comp_ctx->curr_token.t == DUK_TOK_RCURLY)) {
 			duk_bool_t load_rc;
@@ -3292,7 +3294,6 @@ DUK_LOCAL void duk__nud_object_literal(duk_compiler_ctx *comp_ctx, duk_ivalue *r
 			duk__emit_a_bc(comp_ctx, DUK_OP_CLOSURE, reg_temp + 1, (duk_regconst_t) fnum);
 
 			st.num_pairs++;
-#endif /* DUK_USE_ES6 */
 		} else {
 #if defined(DUK_USE_ES6)
 			if (comp_ctx->prev_token.t == DUK_TOK_LBRACKET) {
@@ -3520,6 +3521,32 @@ DUK_LOCAL void duk__expr_nud(duk_compiler_ctx *comp_ctx, duk_ivalue *res) {
 	}
 	case DUK_TOK_LPAREN: {
 		duk_bool_t prev_allow_in;
+
+		if (comp_ctx->curr_token.t == DUK_TOK_RPAREN) {
+			duk_regconst_t reg_temp;
+			duk_int_t fnum;
+
+			/*
+			 *  Narrow arrow function support: empty parameter list only.
+			 *  This is enough for common callback forms like "() => { ... }".
+			 */
+
+			duk__advance(comp_ctx); /* eat ')' */
+			if (comp_ctx->curr_token.t != DUK_TOK_EQUALSIGN) {
+				goto syntax_error;
+			}
+			duk__advance(comp_ctx); /* eat '=' */
+			if (comp_ctx->curr_token.t != DUK_TOK_GT) {
+				goto syntax_error;
+			}
+			duk__advance(comp_ctx); /* eat '>' */
+
+			reg_temp = DUK__ALLOCTEMP(comp_ctx);
+			fnum = duk__parse_arrow_func_like_fnum(comp_ctx, NULL);
+			duk__emit_a_bc(comp_ctx, DUK_OP_CLOSURE, reg_temp, (duk_regconst_t) fnum);
+			duk__ivalue_regconst(res, reg_temp);
+			return;
+		}
 
 		comp_ctx->curr_func.paren_level++;
 		prev_allow_in = comp_ctx->curr_func.allow_in;
@@ -4301,6 +4328,21 @@ DUK_LOCAL void duk__expr_led(duk_compiler_ctx *comp_ctx, duk_ivalue *left, duk_i
 		/* ASSIGNMENT EXPRESSION */
 
 	case DUK_TOK_EQUALSIGN: {
+		if (comp_ctx->curr_token.t == DUK_TOK_GT && left->t == DUK_IVAL_VAR) {
+			duk_hstring *h_argname;
+			duk_regconst_t reg_temp;
+			duk_int_t fnum;
+
+			h_argname = duk_known_hstring(thr, left->x1.valstack_idx);
+			duk__advance(comp_ctx); /* eat '>' */
+
+			reg_temp = DUK__ALLOCTEMP(comp_ctx);
+			fnum = duk__parse_arrow_func_like_fnum(comp_ctx, h_argname);
+			duk__emit_a_bc(comp_ctx, DUK_OP_CLOSURE, reg_temp, (duk_regconst_t) fnum);
+			duk__ivalue_regconst(res, reg_temp);
+			return;
+		}
+
 		/*
 		 *  Assignments are right associative, allows e.g.
 		 *    a = 5;
@@ -4472,8 +4514,8 @@ binary_logical:
 		duk_regconst_t reg_varbind;
 		duk_regconst_t rc_varname;
 
-		duk_regconst_t reg_obj;
-		duk_regconst_t rc_key;
+		duk_regconst_t reg_obj = -1;
+		duk_regconst_t rc_key = -1;
 
 		if (args_assignment) {
 			leftt = left->t;
@@ -6507,6 +6549,14 @@ retry_parse:
 	 *  empty label.
 	 */
 
+	if (comp_ctx->curr_token.t == DUK_TOK_IDENTIFIER &&
+	    comp_ctx->curr_token.str1 == DUK_HTHREAD_GET_STRING(thr, DUK_STRIDX_LET)) {
+		DUK_DDD(DUK_DDDPRINT("let declaration statement, var semantics"));
+		duk__parse_var_stmt(comp_ctx, res, 0 /*expr_flags*/);
+		stmt_flags = DUK__HAS_TERM;
+		goto statement_parsed;
+	}
+
 	tok = comp_ctx->curr_token.t;
 	if (tok == DUK_TOK_FOR || tok == DUK_TOK_DO || tok == DUK_TOK_WHILE || tok == DUK_TOK_SWITCH) {
 		DUK_DDD(DUK_DDDPRINT("iteration/switch statement -> add empty label"));
@@ -6617,6 +6667,12 @@ retry_parse:
 	}
 	case DUK_TOK_VAR: {
 		DUK_DDD(DUK_DDDPRINT("variable declaration statement"));
+		duk__parse_var_stmt(comp_ctx, res, 0 /*expr_flags*/);
+		stmt_flags = DUK__HAS_TERM;
+		break;
+	}
+	case DUK_TOK_LET: {
+		DUK_DDD(DUK_DDDPRINT("let declaration statement, var semantics"));
 		duk__parse_var_stmt(comp_ctx, res, 0 /*expr_flags*/);
 		stmt_flags = DUK__HAS_TERM;
 		break;
@@ -6868,6 +6924,8 @@ retry_parse:
 		stmt_flags |= DUK__HAS_VAL | DUK__HAS_TERM;
 	}
 	} /* end switch (tok) */
+
+statement_parsed:
 
 	/*
 	 *  Statement value handling.
@@ -7949,6 +8007,115 @@ DUK_LOCAL duk_int_t duk__parse_func_like_fnum(duk_compiler_ctx *comp_ctx, duk_sm
 	} else {
 		duk_set_top(thr, entry_top);
 	}
+	duk_memcpy((void *) &comp_ctx->curr_func, (void *) &old_func, sizeof(duk_compiler_func));
+
+	return fnum;
+}
+
+/*
+ *  Parse an empty-parameter arrow function body:
+ *
+ *    () => { ... }
+ *
+ *  This is a narrow compatibility shim for modern callback syntax.
+ *  It currently treats arrow functions like ordinary non-constructable
+ *  function expressions and only supports block bodies.
+ */
+DUK_LOCAL duk_int_t duk__parse_arrow_func_like_fnum(duk_compiler_ctx *comp_ctx, duk_hstring *h_argname) {
+	duk_hthread *thr = comp_ctx->thr;
+	duk_compiler_func old_func;
+	duk_idx_t entry_top;
+	duk_int_t fnum;
+
+	/*
+	 *  On second pass, skip the function body using the recorded
+	 *  lexer position from the first pass.
+	 */
+
+	if (!comp_ctx->curr_func.in_scanning) {
+		duk_lexer_point lex_pt;
+
+		fnum = comp_ctx->curr_func.fnum_next++;
+		duk_get_prop_index(thr, comp_ctx->curr_func.funcs_idx, (duk_uarridx_t) (fnum * 3 + 1));
+		lex_pt.offset = (duk_size_t) duk_to_uint(thr, -1);
+		duk_pop(thr);
+		duk_get_prop_index(thr, comp_ctx->curr_func.funcs_idx, (duk_uarridx_t) (fnum * 3 + 2));
+		lex_pt.line = duk_to_int(thr, -1);
+		duk_pop(thr);
+
+		DUK_DDD(DUK_DDDPRINT("second pass of an arrow func, skip the function, reparse closing brace; lex offset=%ld, line=%ld",
+		                     (long) lex_pt.offset,
+		                     (long) lex_pt.line));
+
+		DUK_LEXER_SETPOINT(&comp_ctx->lex, &lex_pt);
+		comp_ctx->curr_token.t = 0;
+		comp_ctx->curr_token.start_line = 0;
+		duk__advance(comp_ctx);
+		duk__advance_expect(comp_ctx, DUK_TOK_RCURLY);
+
+		return fnum;
+	}
+
+	/*
+	 *  On first pass, initialize a new nested function context and
+	 *  parse the block body.
+	 */
+
+	entry_top = duk_get_top(thr);
+	DUK_DDD(DUK_DDDPRINT("before arrow func: entry_top=%ld, curr_tok.start_offset=%ld",
+	                     (long) entry_top,
+	                     (long) comp_ctx->curr_token.start_offset));
+
+	duk_memcpy(&old_func, &comp_ctx->curr_func, sizeof(duk_compiler_func));
+
+	duk_memzero(&comp_ctx->curr_func, sizeof(duk_compiler_func));
+	duk__init_func_valstack_slots(comp_ctx);
+	DUK_ASSERT(comp_ctx->curr_func.num_formals == 0);
+
+	if (h_argname != NULL) {
+		duk_push_hstring(thr, h_argname);
+		duk_put_prop_index(thr, comp_ctx->curr_func.argnames_idx, 0);
+	}
+
+	/* inherit initial strictness from parent */
+	comp_ctx->curr_func.is_strict = old_func.is_strict;
+
+	DUK_ASSERT(comp_ctx->curr_func.is_notail == 0);
+	comp_ctx->curr_func.is_function = 1;
+	DUK_ASSERT(comp_ctx->curr_func.is_eval == 0);
+	DUK_ASSERT(comp_ctx->curr_func.is_global == 0);
+	comp_ctx->curr_func.is_setget = 0;
+	comp_ctx->curr_func.is_namebinding = 0;
+	comp_ctx->curr_func.is_constructable = 0;
+
+	duk__parse_func_body(comp_ctx,
+	                     0, /* expect_eof */
+	                     0, /* implicit_return_value */
+	                     0, /* regexp_after */
+	                     DUK_TOK_LCURLY); /* expect_token */
+
+	duk__convert_to_func_template(comp_ctx);
+
+	DUK_DDD(DUK_DDDPRINT("after arrow func: prev_tok.start_offset=%ld, curr_tok.start_offset=%ld",
+	                     (long) comp_ctx->prev_token.start_offset,
+	                     (long) comp_ctx->curr_token.start_offset));
+	DUK_ASSERT(comp_ctx->lex.input[comp_ctx->prev_token.start_offset] == (duk_uint8_t) DUK_ASC_RCURLY);
+
+	DUK_ASSERT(duk_get_length(thr, old_func.funcs_idx) == (duk_size_t) (old_func.fnum_next * 3));
+	fnum = old_func.fnum_next++;
+
+	if (fnum > DUK__MAX_FUNCS) {
+		DUK_ERROR_RANGE(comp_ctx->thr, DUK_STR_FUNC_LIMIT);
+		DUK_WO_NORETURN(return 0;);
+	}
+
+	(void) duk_put_prop_index(thr, old_func.funcs_idx, (duk_uarridx_t) (fnum * 3));
+	duk_push_size_t(thr, comp_ctx->prev_token.start_offset);
+	(void) duk_put_prop_index(thr, old_func.funcs_idx, (duk_uarridx_t) (fnum * 3 + 1));
+	duk_push_int(thr, comp_ctx->prev_token.start_line);
+	(void) duk_put_prop_index(thr, old_func.funcs_idx, (duk_uarridx_t) (fnum * 3 + 2));
+
+	duk_set_top(thr, entry_top);
 	duk_memcpy((void *) &comp_ctx->curr_func, (void *) &old_func, sizeof(duk_compiler_func));
 
 	return fnum;
